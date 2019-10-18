@@ -37,6 +37,8 @@ class Node:
 		return hash(str(self))
 	def has_children(self):
 		return bool(self.children)
+class DijDist(namedlist("DijDist",[("known",False),("cost",float("inf")),("path",-1)])):
+	pass
 class VirtualTopo:
 	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=10,max_weight=200):
 		"""Create random undirected graph  with n nodes
@@ -96,6 +98,16 @@ class VirtualTopo:
 			name(str): pdf file's name to save, default "virtual_topo"
 		"""
 		self.graphviz.view(name,cleanup=True,quiet_view=True)
+	def dij_pairs(self,src):
+		src_index=self.nodes.index(src)
+		n=len(self.nodes)
+		dist=[DijDist() for _ in range(n)]
+		dist[src_index].dist=0
+		for _ in range(n):
+			u=min_dist(dist)
+			dist[u].visited=True
+
+
 	def __to_graphviz(self,*args,**kwargs):
 		graph=graphviz.Graph(*args,**kwargs)
 		for i,j in self.pairs:
