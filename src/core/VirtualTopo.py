@@ -38,7 +38,7 @@ class Node:
 	def has_children(self):
 		return bool(self.children)
 class VirtualTopo:
-	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=1,max_weight=1000):
+	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=10,max_weight=200):
 		"""Create random undirected graph  with n nodes
 		Args:
 			n (int): Number of nodes
@@ -96,8 +96,6 @@ class VirtualTopo:
 			name(str): pdf file's name to save, default "virtual_topo"
 		"""
 		self.graphviz.view(name,cleanup=True,quiet_view=True)
-	def savefig(self):
-		pass
 	def __to_graphviz(self,*args,**kwargs):
 		graph=graphviz.Graph(*args,**kwargs)
 		for i,j in self.pairs:
@@ -106,6 +104,5 @@ class VirtualTopo:
 			graph.edge(u.name,v.name,label=str(u[v].weight))
 		return graph
 if __name__=="__main__":
-	topo=VirtualTopo(7,volume=.75)
+	topo=VirtualTopo(10,volume=.25)
 	topo.view()
-	
