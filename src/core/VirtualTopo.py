@@ -39,6 +39,54 @@ class Node:
 		return bool(self.children)
 class DijDist(namedlist("DijDist",[("known",False),("cost",float("inf")),("path",-1)])):
 	pass
+class DijTree:
+	"""Dijkstra tree
+    Args:
+		virtual_topo (VirtualTop): graph to use
+		src_index (int): starting node index
+    Attributes:
+        graph (graphviz.Graph): Graphviz graph
+        pairs (list): list containing tuples of (src_index,weight,dest_index)
+	"""
+	def __init__(self,virtual_topo,src_index):
+			nodes=virtual_topo.nodes
+			n=len(nodes)
+			dist=[DijDist() for _ in range(n)]
+			dist[src_index].cost=0
+			for _ in range(n):
+				u=DijTree.min_dist(dist)
+				du=dist[u]
+				nu=nodes[u]
+				du.known=True
+				for conn in nu:
+					i=nodes.index(conn.node)
+					di=dist[i]
+					if di.cost>du.cost+conn.weight:
+						di.cost=du.cost+conn.weight
+						di.path=u
+			#--------------------end dijsktra--------------------
+			self.graph=graphviz.Graph()
+			self.pairs=[]
+			for i,d in enumerate(dist):
+				if d.path==-1:
+					continue
+				u=nodes[i]
+				v=nodes[d.path]
+				weight=u[v].weight
+				self.pairs.append((i,weight,d.path))
+				self.graph.edge(u.name,v.name,label=str(weight))
+	def min_dist(dist):
+		m=float("inf")
+		for i,e in enumerate(dist):
+			if e.known:
+				continue
+			if e.cost<m:
+				ans=i
+				m=e.cost
+		return ans
+	def view(self,name="dij"):
+		self.graph.view(name,cleanup=True,quiet_view=True)
+			
 class VirtualTopo:
 	"""Create random undirected graph  with n nodes
 	Args:
@@ -101,15 +149,6 @@ class VirtualTopo:
 			name(str): pdf file's name to save, default "virtual_topo"
 		"""
 		self.graphviz.view(name,cleanup=True,quiet_view=True)
-	def dij_pairs(self,src):
-		src_index=self.nodes.index(src)
-		n=len(self.nodes)
-		dist=[DijDist() for _ in range(n)]
-		dist[src_index].dist=0
-		for _ in range(n):
-			u=min_dist(dist)
-			dist[u].visited=True
-
 
 	def __to_graphviz(self,*args,**kwargs):
 		graph=graphviz.Graph(*args,**kwargs)
@@ -119,5 +158,11 @@ class VirtualTopo:
 			graph.edge(u.name,v.name,label=str(u[v].weight))
 		return graph
 if __name__=="__main__":
-	topo=VirtualTopo(10,volume=.25)
+	import pickle
+	topo=VirtualTopo(5,volume=.5)
 	topo.view()
+	DijTree(topo,0).view("dij1")
+	DijTree(topo,1).view("dij2")
+	DijTree(topo,2).view("dij3")
+	DijTree(topo,3).view("dij4")
+	DijTree(topo,4).view("dij5")
