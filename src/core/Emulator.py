@@ -82,12 +82,15 @@ class Topo( mininet_topo ):
 			for ip1,ip2 in self.__routing_table(i):
 				self.cmds_dijs.append(Command(node_name,f"ip route add {ip1} via {ip2}"))
 	
-	def __routing_table(self,i):
-		node=self.nodes_list[i]
+	def __routing_table(self,src_index):
+		def get_ip_between(i1,i2):
+			n1,n2=(self.nodes_list[i] for i in (i1,i2))
+			return next((edge.ip for edge in n2.edges if edge.dest==n1))
+		node=self.nodes_list[src_index]
 		node_ip=node.edges[0].ip
 		neighbors={self.nodes_list.index(edge.dest):set() for edge in node.edges}
-		dij=DijTree(self.virtual_topo,i)
-		dij.view(f"dij{i+1}")
+		dij=DijTree(self.virtual_topo,src_index)
+		dij.view(f"dij{src_index+1}")
 		pairs={l:r for l,_,r in dij.pairs}
 		for i in range(len(self.virtual_topo.nodes)):
 			aux_act=i
@@ -98,7 +101,8 @@ class Topo( mininet_topo ):
 				print(aux_act,aux_next)
 				if aux_next==None:
 					break
-				s.add(aux_act)
+				# s.add(get_ip_between(aux_next,aux_act))
+				s.add(self.nodes_list[aux_act])
 				if aux_next in neighbors:
 					neighbors[aux_next]|=s
 					break
@@ -106,11 +110,11 @@ class Topo( mininet_topo ):
 		print(node.name,pairs)
 		print(neighbors)
 		for neight,s in neighbors.items():
-			neight_node=self.nodes_list[neight]
-			neight_ip=next((edge.ip for edge in neight_node.edges if edge.dest==node))
-			for dest in s:
-				dest_ip=self.nodes_list[dest].edges[0].ip
-				yield dest_ip,neight_ip
+			neight_ip=get_ip_between(src_index,neight)
+			for dest_node in s:
+				for edge in dest_node.edges:
+					alias=edge.ip
+					yield alias,neight_ip
 
 
 class Emulator():
@@ -127,16 +131,15 @@ class Emulator():
 		print("-"*16,"NODE IPS","-"*16)
 		for node in self.net.topo.nodes_list:
 			print(f"{node.name}={[edge.ip for edge in node.edges]}")
-		print("-"*16,"FIX IP ALIASES COMMANDS","-"*16)
-		for cmd in self.net.topo.cmds_fix_ips:
-			print(cmd.node,cmd.cmd)
-			exec_cmd(cmd)
 		print("-"*16,"DIJKISTRA TREE COMMANDS","-"*16)
 		for cmd in self.net.topo.cmds_dijs:
 			print(cmd.node,cmd.cmd)
 			exec_cmd(cmd)
-		# self.net.pingAll()
-		# self.net.pingAll()
+		print("-"*16,"FIX IP ALIASES COMMANDS","-"*16)
+		for cmd in self.net.topo.cmds_fix_ips:
+			print(cmd.node,cmd.cmd)
+			exec_cmd(cmd)
+		self.net.pingAll()
 	def pingAll(self,timeout=10):
 		self.net.pingAll(timeout)
 	def start(self):
@@ -145,7 +148,7 @@ class Emulator():
 		self.net.stop()
 if __name__=="__main__":
 	from VirtualTopo import VirtualTopo
-	virtual_topo=VirtualTopo(5,volume=.5)
+	virtual_topo=VirtualTopo(10,volume=.25)
 	virtual_topo.view()
 
 	Emulator(virtual_topo).start()
