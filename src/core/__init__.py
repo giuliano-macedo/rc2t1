@@ -1,2 +1,2 @@
-from .VirtualTopo import VirtualTopo
+from .VirtualTopo import VirtualTopo,DijTree
 from .Emulator import Emulator

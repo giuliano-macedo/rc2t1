@@ -5,6 +5,7 @@ from mininet.cli  import CLI as mininet_CLI
 from mininet.link import TCLink as mininet_TCLink
 import mininet.log
 from namedlist import namedlist
+from VirtualTopo import DijTree
 
 class LinuxRouter( mininet_node ):
 	"""A Node with IP forwarding enabled.
@@ -36,7 +37,8 @@ class Topo( mininet_topo ):
 	def __init__(self,virtual_topo,*args,**kwargs):
 		self.virtual_topo=virtual_topo
 		self.nodes_list=[]
-		self.cmds=[]
+		self.cmds_fix_ips=[]
+		self.cmds_dijs=[]
 		super(Topo,self).__init__(*args,**kwargs)
 	def __add_node(self,name):
 		self.addNode(name,cls=LinuxRouter,ip=None)
@@ -61,9 +63,9 @@ class Topo( mininet_topo ):
 		)
 		print((l.name,r.name,edge1.ip,edge2.ip))
 		if r.edges: # if already have edges
-			self.cmds.append(Command(l.name,f"ip route add {r.edges[0].ip} via {edge2.ip}"))
+			self.cmds_fix_ips.append(Command(l.name,f"ip route add {r.edges[0].ip} via {edge2.ip}"))
 		if l.edges:
-			self.cmds.append(Command(r.name,f"ip route add {l.edges[0].ip} via {edge1.ip}"))
+			self.cmds_fix_ips.append(Command(r.name,f"ip route add {l.edges[0].ip} via {edge1.ip}"))
 		l+=edge1
 		r+=edge2
 	def build( self, **kwargs ):
@@ -74,6 +76,42 @@ class Topo( mininet_topo ):
 			r=self.nodes_list[ri]
 			weight=self.virtual_topo.nodes[li][self.virtual_topo.nodes[ri]].weight
 			self.__add_edge(l,r,i,weight)
+		#--------------------DIJKSTRA--------------------
+		for i in range(len(self.virtual_topo.nodes)):
+			node_name=self.nodes_list[i].name
+			for ip1,ip2 in self.__routing_table(i):
+				self.cmds_dijs.append(Command(node_name,f"ip route add {ip1} via {ip2}"))
+	
+	def __routing_table(self,i):
+		node=self.nodes_list[i]
+		node_ip=node.edges[0].ip
+		neighbors={self.nodes_list.index(edge.dest):set() for edge in node.edges}
+		dij=DijTree(self.virtual_topo,i)
+		dij.view(f"dij{i+1}")
+		pairs={l:r for l,_,r in dij.pairs}
+		for i in range(len(self.virtual_topo.nodes)):
+			aux_act=i
+			aux_next=None
+			s=set()
+			while True:
+				aux_next=pairs.get(aux_act)
+				print(aux_act,aux_next)
+				if aux_next==None:
+					break
+				s.add(aux_act)
+				if aux_next in neighbors:
+					neighbors[aux_next]|=s
+					break
+				aux_act=aux_next
+		print(node.name,pairs)
+		print(neighbors)
+		for neight,s in neighbors.items():
+			neight_node=self.nodes_list[neight]
+			neight_ip=next((edge.ip for edge in neight_node.edges if edge.dest==node))
+			for dest in s:
+				dest_ip=self.nodes_list[dest].edges[0].ip
+				yield dest_ip,neight_ip
+
 
 class Emulator():
 	def __init__(self,virtual_topo):
@@ -85,9 +123,20 @@ class Emulator():
 		topo=Topo(virtual_topo)
 		self.net = mininet_Mininet( topo=topo ,link=mininet_TCLink)
 		self.net.start()
-		for cmd in self.net.topo.cmds:
+		exec_cmd=lambda cmd:mininet.log.info(self.net[cmd.node].cmd(cmd.cmd))
+		print("-"*16,"NODE IPS","-"*16)
+		for node in self.net.topo.nodes_list:
+			print(f"{node.name}={[edge.ip for edge in node.edges]}")
+		print("-"*16,"FIX IP ALIASES COMMANDS","-"*16)
+		for cmd in self.net.topo.cmds_fix_ips:
 			print(cmd.node,cmd.cmd)
-			self.net[cmd.node].cmd(cmd.cmd)
+			exec_cmd(cmd)
+		print("-"*16,"DIJKISTRA TREE COMMANDS","-"*16)
+		for cmd in self.net.topo.cmds_dijs:
+			print(cmd.node,cmd.cmd)
+			exec_cmd(cmd)
+		# self.net.pingAll()
+		# self.net.pingAll()
 	def pingAll(self,timeout=10):
 		self.net.pingAll(timeout)
 	def start(self):
@@ -96,7 +145,7 @@ class Emulator():
 		self.net.stop()
 if __name__=="__main__":
 	from VirtualTopo import VirtualTopo
-	virtual_topo=VirtualTopo(4,volume=.75)
+	virtual_topo=VirtualTopo(5,volume=.5)
 	virtual_topo.view()
 
 	Emulator(virtual_topo).start()
