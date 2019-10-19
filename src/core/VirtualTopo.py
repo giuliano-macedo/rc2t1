@@ -40,17 +40,20 @@ class Node:
 class DijDist(namedlist("DijDist",[("known",False),("cost",float("inf")),("path",-1)])):
 	pass
 class VirtualTopo:
+	"""Create random undirected graph  with n nodes
+	Args:
+		n (int): Number of nodes
+		nodes_prefix (str,optional): prefix of the name of each node, default='v' 
+		volume (int,optional): number indicating how many connection in the whole graph,
+			must be in (0,1), default:random.
+		min_weight (int,optional) minimal value of the weight
+		max_weight (int,optional) maximum value of the weight
+	Attributes:
+		nodes (list): list containing all the nodes
+		pairs (set): set containing frozenset of pairs of node indexes
+		graphviz (graphviz.Graph): Graphviz graph
+	"""
 	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=10,max_weight=200):
-		"""Create random undirected graph  with n nodes
-		Args:
-			n (int): Number of nodes
-			nodes_prefix (str,optional): prefix of the name of each node, default='v' 
-			volume (int,optional): number indicating how many connection in the whole graph,
-				must be in (0,1), default:random.
-			min_weight (int,optional) minimal value of the weight
-			max_weight (int,optional) maximum value of the weight
-
-		"""
 		self.nodes=[Node(f"{nodes_prefix}{i+1}") for i in range(n)]
 		volume=random.random() if not volume else volume
 		max_connections=(n*(n-1))//2
