@@ -6,6 +6,8 @@ from mininet.link import TCLink as mininet_TCLink
 import mininet.log
 from namedlist import namedlist
 from VirtualTopo import DijTree
+import graphviz
+import os
 
 class LinuxRouter( mininet_node ):
 	"""A Node with IP forwarding enabled.
@@ -90,7 +92,7 @@ class Topo( mininet_topo ):
 		node_ip=node.edges[0].ip
 		neighbors={self.nodes_list.index(edge.dest):set() for edge in node.edges}
 		dij=DijTree(self.virtual_topo,src_index)
-		dij.view(f"dij{src_index+1}")
+		dij.savefig(f"dij{src_index+1}")
 		pairs={l:r for l,_,r in dij.pairs}
 		for i in range(len(self.virtual_topo.nodes)):
 			aux_act=i
@@ -127,6 +129,7 @@ class Emulator():
 		topo=Topo(virtual_topo)
 		self.net = mininet_Mininet( topo=topo ,link=mininet_TCLink)
 		self.net.start()
+		self.graphviz=self.__to_graphviz(self.net.topo)
 		exec_cmd=lambda cmd:mininet.log.info(self.net[cmd.node].cmd(cmd.cmd))
 		print("-"*16,"NODE IPS","-"*16)
 		for node in self.net.topo.nodes_list:
@@ -139,7 +142,33 @@ class Emulator():
 		for cmd in self.net.topo.cmds_fix_ips:
 			print(cmd.node,cmd.cmd)
 			exec_cmd(cmd)
-		self.net.pingAll()
+	def __to_graphviz(self,topo):
+		ans=graphviz.Graph()
+		edges=set()
+		for node in topo.nodes_list:
+			for edge in node.edges:
+				pair=frozenset((node,edge.dest))
+				if pair in edges:
+					continue
+				edges.add(pair)
+				ip_splitted=edge.ip.split(".")
+				ans.edge(
+					node.name,
+					edge.dest.name,
+					taillabel=f"{ip_splitted[2]}.{ip_splitted[3]}",
+					label=f"{edge.delay}ms",
+					headlabel=f"{ip_splitted[2]}.{1 if ip_splitted[3]=='2' else 2}"
+				)
+		return ans
+
+	def savefig(self,fname="map"):
+		"""saves graph's pdf
+		Args:
+			fname(str): pdf file's name to save, default "virtual_topo"
+		"""
+		self.graphviz.format="pdf"
+		self.graphviz.render(fname)
+		os.unlink(fname)
 	def pingAll(self,timeout=10):
 		self.net.pingAll(timeout)
 	def start(self):
@@ -149,6 +178,8 @@ class Emulator():
 if __name__=="__main__":
 	from VirtualTopo import VirtualTopo
 	virtual_topo=VirtualTopo(10,volume=.25)
-	virtual_topo.view()
-
-	Emulator(virtual_topo).start()
+	virtual_topo.savefig()
+	emu=Emulator(virtual_topo)
+	emu.savefig("map")
+	emu.net.pingAll()
+	emu.start()

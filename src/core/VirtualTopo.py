@@ -3,6 +3,7 @@ from namedlist import namedlist
 from collections import deque
 from math import ceil
 import graphviz
+import os
 class Connection(namedlist("Connection",["node","weight"])):
 	def __hash__(self):
 		return hash((self.node,self.weight))
@@ -86,6 +87,14 @@ class DijTree:
 		return ans
 	def view(self,name="dij"):
 		self.graph.view(name,cleanup=True,quiet_view=True)
+	def savefig(self,fname="dij"):
+		"""saves graph's pdf
+		Args:
+			fname(str): pdf file's name to save, default "dij"
+		"""
+		self.graph.format="pdf"
+		self.graph.render(fname)
+		os.unlink(fname)
 			
 class VirtualTopo:
 	"""Create random undirected graph  with n nodes
@@ -101,7 +110,7 @@ class VirtualTopo:
 		pairs (set): set containing frozenset of pairs of node indexes
 		graphviz (graphviz.Graph): Graphviz graph
 	"""
-	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=10,max_weight=200):
+	def __init__(self,n,nodes_prefix="v",volume=None,min_weight=1,max_weight=20):
 		self.nodes=[Node(f"{nodes_prefix}{i+1}") for i in range(n)]
 		volume=random.random() if not volume else volume
 		max_connections=(n*(n-1))//2
@@ -149,7 +158,14 @@ class VirtualTopo:
 			name(str): pdf file's name to save, default "virtual_topo"
 		"""
 		self.graphviz.view(name,cleanup=True,quiet_view=True)
-
+	def savefig(self,fname="virtual_topo"):
+		"""saves graph's pdf
+		Args:
+			fname(str): pdf file's name to save, default "virtual_topo"
+		"""
+		self.graphviz.format="pdf"
+		self.graphviz.render(fname)
+		os.unlink(fname)
 	def __to_graphviz(self,*args,**kwargs):
 		graph=graphviz.Graph(*args,**kwargs)
 		for i,j in self.pairs:
@@ -160,9 +176,9 @@ class VirtualTopo:
 if __name__=="__main__":
 	import pickle
 	topo=VirtualTopo(5,volume=.5)
-	topo.view()
-	DijTree(topo,0).view("dij1")
-	DijTree(topo,1).view("dij2")
-	DijTree(topo,2).view("dij3")
-	DijTree(topo,3).view("dij4")
-	DijTree(topo,4).view("dij5")
+	topo.savefig("virtual_topo")
+	DijTree(topo,0).savefig("dij1")
+	DijTree(topo,1).savefig("dij2")
+	DijTree(topo,2).savefig("dij3")
+	DijTree(topo,3).savefig("dij4")
+	DijTree(topo,4).savefig("dij5")
