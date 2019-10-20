@@ -39,7 +39,6 @@ class Topo( mininet_topo ):
 	def __init__(self,virtual_topo,*args,**kwargs):
 		self.virtual_topo=virtual_topo
 		self.nodes_list=[]
-		self.cmds_fix_ips=[]
 		self.cmds_dijs=[]
 		super(Topo,self).__init__(*args,**kwargs)
 	def __add_node(self,name):
@@ -63,11 +62,6 @@ class Topo( mininet_topo ):
 			params2={"ip":f"{edge2.ip}/24"},
 			delay=f"{delay}ms"
 		)
-		print((l.name,r.name,edge1.ip,edge2.ip))
-		if r.edges: # if already have edges
-			self.cmds_fix_ips.append(Command(l.name,f"ip route add {r.edges[0].ip} via {edge2.ip}"))
-		if l.edges:
-			self.cmds_fix_ips.append(Command(r.name,f"ip route add {l.edges[0].ip} via {edge1.ip}"))
 		l+=edge1
 		r+=edge2
 	def build( self, **kwargs ):
@@ -100,17 +94,14 @@ class Topo( mininet_topo ):
 			s=set()
 			while True:
 				aux_next=pairs.get(aux_act)
-				print(aux_act,aux_next)
 				if aux_next==None:
 					break
 				# s.add(get_ip_between(aux_next,aux_act))
 				s.add(self.nodes_list[aux_act])
-				if aux_next in neighbors:
-					neighbors[aux_next]|=s
+				if aux_next==src_index:
+					neighbors[aux_act]|=s
 					break
 				aux_act=aux_next
-		print(node.name,pairs)
-		print(neighbors)
 		for neight,s in neighbors.items():
 			neight_ip=get_ip_between(src_index,neight)
 			for dest_node in s:
@@ -131,17 +122,14 @@ class Emulator():
 		self.net.start()
 		self.graphviz=self.__to_graphviz(self.net.topo)
 		exec_cmd=lambda cmd:mininet.log.info(self.net[cmd.node].cmd(cmd.cmd))
-		print("-"*16,"NODE IPS","-"*16)
-		for node in self.net.topo.nodes_list:
-			print(f"{node.name}={[edge.ip for edge in node.edges]}")
 		print("-"*16,"DIJKISTRA TREE COMMANDS","-"*16)
 		for cmd in self.net.topo.cmds_dijs:
 			print(cmd.node,cmd.cmd)
 			exec_cmd(cmd)
-		print("-"*16,"FIX IP ALIASES COMMANDS","-"*16)
-		for cmd in self.net.topo.cmds_fix_ips:
-			print(cmd.node,cmd.cmd)
-			exec_cmd(cmd)
+		print("-"*32)
+		print("-"*16,"NODE IPS","-"*16)
+		for node in self.net.topo.nodes_list:
+			print(f"{node.name}={[edge.ip for edge in node.edges]}")
 	def __to_graphviz(self,topo):
 		ans=graphviz.Graph()
 		edges=set()
