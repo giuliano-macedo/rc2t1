@@ -5,7 +5,7 @@ from mininet.cli  import CLI as mininet_CLI
 from mininet.link import TCLink as mininet_TCLink
 import mininet.log
 from namedlist import namedlist
-from VirtualTopo import DijTree
+from .VirtualTopo import DijTree
 import graphviz
 import os
 
