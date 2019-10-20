@@ -1,3 +1,2 @@
-mininet
 graphviz
 namedlist
